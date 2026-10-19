@@ -2,24 +2,17 @@ services:
   - type: web
     name: apipulse-backend
     runtime: python
+    plan: free
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     envVars:
-      - key: DATABASE_URL
-        fromDatabase:
-          name: apipulse-db
-          property: connectionString
       - key: FRONTEND_ORIGIN
         value: https://apipulse-frontend.onrender.com
 
-  - type: web
+  - type: static
     name: apipulse-frontend
-    runtime: static
     buildCommand: npm ci && npm run build
     staticPublishPath: ./dist
     envVars:
       - key: VITE_API_BASE_URL
         value: https://apipulse-backend.onrender.com
-
-databases:
-  - name: apipulse-db
