@@ -12,7 +12,7 @@
 ## Project links
 
 - **Source repository:** https://github.com/Corvus06655/ApiPulse-API-Monitoring-Observability-Dashboard
-- **Live demo:** Render deployment is being set up.
+- **Render frontend URL:** https://apipulse-api-monitoring-observability.onrender.com
 
 ## What it does
 
