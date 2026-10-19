@@ -4,6 +4,11 @@
 
 > A developer-focused API health and response-time dashboard, built with React and connected to an existing FastAPI monitoring service.
 
+## Live demo
+
+- **Frontend:** https://apipulse-api-monitoring-observability.onrender.com
+- **Backend health endpoint:** Not deployed yet; the Render free Web Service plan is unavailable in the current account.
+
 ## Project links
 
 - **Source repository:** https://github.com/Corvus06655/ApiPulse-API-Monitoring-Observability-Dashboard
