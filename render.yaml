@@ -17,9 +17,10 @@ services:
           name: apipulse-db
           property: connectionString
 
-  - type: static
+  - type: web
     name: ApiPulse-API-Monitoring-Observability-Dashboard
-    buildCommand: corepack enable && corepack prepare pnpm@11.25.0 --activate && pnpm install --frozen-lockfile && pnpm build
+    runtime: static
+    buildCommand: npm ci && npm run build
     staticPublishPath: ./dist
     envVars:
       - key: NODE_VERSION
