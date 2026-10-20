@@ -4,8 +4,14 @@ dist/
 .env.*
 !.env.example
 .DS_Store
-
-# Backend/local test artifacts
+.venv/
+venv/
+.pytest_cache/
+.coverage
+htmlcov/
 test.db
+*.db
+*.sqlite
+*.sqlite3
 *.pyc
 __pycache__/

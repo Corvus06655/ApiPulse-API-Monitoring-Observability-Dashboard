@@ -1,69 +1,102 @@
-# ApiPulse-API-Monitoring-Observability-Dashboard
+# ApiPulse — API Monitoring & Observability Dashboard
 
-## ApiPulse — API Monitoring & Observability Dashboard
+ApiPulse is a full-stack API-monitoring project with a FastAPI backend, SQLAlchemy persistence, scheduled health checks, a PostgreSQL-compatible database layer, and a React/Vite dashboard.
 
-> A developer-focused API health and response-time dashboard, built with React and connected to an existing FastAPI monitoring service.
+## Features
 
-## Live demo
+- Register, list, update, and delete monitored API targets
+- Run manual HTTP/HTTPS health checks and persist each result
+- Automatically check registered targets at 60-second intervals while the backend service is running
+- Browse per-target check history and statistics
+- Show successful and failed checks, uptime percentage, and average response time
+- Dashboard with real backend data, empty states, errors, and no invented metrics
+- Public-host validation to block obvious localhost/private-network SSRF attempts
+- Automated backend and frontend API-client tests
 
-- **Frontend:** https://apipulse-api-monitoring-observability.onrender.com
-- **Backend health endpoint:** Not deployed yet; the Render free Web Service plan is unavailable in the current account.
+## Stack
 
-## Project links
+FastAPI, Python 3.12, SQLAlchemy, PostgreSQL, APScheduler, requests, pytest, React 18, Vite 6, Tailwind CSS, Recharts, Lucide React.
 
-- **Source repository:** https://github.com/Corvus06655/ApiPulse-API-Monitoring-Observability-Dashboard
-- **Render frontend URL:** https://apipulse-api-monitoring-observability.onrender.com
+## Repository structure
 
-## What it does
+- `app/`: FastAPI app, database setup, models, schemas, target routes, checker, and scheduler
+- `src/`: React frontend and API client
+- `test/`: backend tests using an isolated in-memory SQLite database
+- `render.yaml`: Render blueprint for the backend, frontend, and database
+- `.env.example`: local frontend configuration
 
-ApiPulse gives engineers one place to manage monitored endpoints, inspect the latest known health state, run an on-demand check, review backend statistics and browse available check history. The frontend is responsive and includes Overview, Monitored APIs, Check History and Settings views, plus create/edit forms, a target-details drawer, delete confirmation and live connection testing.
+## Local development
 
-Monitoring data is always read from the configured backend. A target is never marked healthy merely because it exists. If no check record is available, the UI says “No check yet”; if the backend has not returned enough real timestamped samples, the response-time chart shows an empty state rather than invented points. When a production backend URL is not configured, the dashboard reports that state instead of trying localhost or showing false zero metrics.
-
-## Built with
-
-React 18 · Vite 6 · JavaScript · Tailwind CSS · Recharts · Lucide React · Fetch API
-
-## Architecture
-
-- `src/App.jsx` — responsive application shell, navigation and CRUD/check orchestration.
-- `src/pages/` — Overview, Monitored APIs, Check History and Settings.
-- `src/components/` — status/metric cards, chart, history table, loading/empty states and accessible dialogs.
-- `src/lib/api.js` — centralized Fetch client, request methods, JSON/error handling, environment-aware API URL and history-method compatibility.
-- `src/lib/useDashboardData.js` — real target, per-target stats and history loading/aggregation.
-- `public/backend-integration.md` — minimal local CORS setup and the supplied backend's history-route/query discrepancy.
-- `public/manus-routes.json` — declared application route.
-
-The frontend stays separate from the supplied FastAPI + PostgreSQL backend. No backend code is replaced or modified.
-
-## Run locally
-
-Requirements: Node.js 20.19+ (or 22.12+) and pnpm 11.25.0.
+### Backend
+Create and activate a virtual environment, then install dependencies:
 
 ```bash
-pnpm install
+python -m venv .venv
+# Windows PowerShell: .venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+uvicorn app.main:app --reload
+```
+
+The backend uses `DATABASE_URL` if present. Without it, local development falls back to SQLite at `./apipulse.db`.
+
+Open `http://127.0.0.1:8000/docs`.
+
+### Frontend
+Node.js 22 is pinned in `.node-version`.
+
+```bash
+npm ci
 cp .env.example .env
-# Start the existing FastAPI app separately on http://127.0.0.1:8000
-pnpm dev
+npm run dev
 ```
 
-Open `http://localhost:3000`. Set `VITE_API_BASE_URL` in `.env` if FastAPI is running at a different address. For local development, allow the frontend origins `http://localhost:3000` and `http://127.0.0.1:3000` in FastAPI CORS; see [backend integration notes](public/backend-integration.md).
+Open the Vite URL printed by the command. On Windows, copy `.env.example` to `.env` manually if `cp` is unavailable. By default, the frontend uses `http://127.0.0.1:8000`.
 
-A remote static site cannot reach a backend running only at `127.0.0.1` on your computer. For live monitoring data, set the frontend build environment variable `VITE_API_BASE_URL` to a publicly reachable HTTPS FastAPI origin and allow the deployed site origin in backend CORS. Until configured, production builds report that the backend URL is missing; they do not silently use localhost or fabricate data.
+## Tests
 
-## Validate
+Backend:
 
 ```bash
-pnpm test
-pnpm build
+python -m pytest -v
 ```
 
-The API-client tests cover development/production API URL resolution, endpoint paths, HTTP methods, JSON bodies, history-method fallback and FastAPI error details.
+Frontend API client:
 
-## Backend contract note
+```bash
+npm test
+npm run build
+```
 
-The supplied FastAPI code exposes `POST /target/{id}/history`, although the requested contract says GET. The frontend first tries GET and falls back to POST on HTTP 405, supporting both versions. The supplied SQL query also filters `CheckResult.id == target_id` rather than `CheckResult.target_id == target_id`, which can omit or return another target's rows. The UI filters out rows explicitly belonging to a different target and reports the resulting timeline as potentially incomplete. The optional correction is documented separately; no backend files were changed.
+The backend tests use an isolated in-memory SQLite database and do not modify the developer's local data.
 
-## Resume summary
+## Render deployment
 
-Built a responsive API-monitoring dashboard with React, Vite, Tailwind CSS and Recharts; integrated target CRUD, manual checks, per-target statistics and history with an existing FastAPI service; and implemented loading/error/empty states with a strict no-fabricated-metrics policy.
+The `render.yaml` blueprint defines:
+- A Python web service named `apipulse-backend`
+- A static site named `ApiPulse-API-Monitoring-Observability-Dashboard`
+- A PostgreSQL database named `apipulse-db`
+
+Deploy the blueprint from Render's dashboard using this repository and the `main` branch. Review Render's pricing/expiration rules for free resources before relying on the free PostgreSQL instance for long-term data retention. Free web services may sleep when idle, so the 60-second scheduler is not a guaranteed always-on monitoring service on a sleeping instance.
+
+The static frontend must use `VITE_API_BASE_URL` pointing to the public HTTPS backend URL. The backend's `FRONTEND_ORIGIN` must include the deployed frontend origin. Render uses `/health` for a readiness check, including a simple database connectivity test.
+
+## API routes
+
+- `GET /` — API welcome/status response
+- `GET /health` — readiness check including database connectivity
+- `POST /target/` — create target
+- `GET /target/` — list targets
+- `GET /target/{target_id}` — get target
+- `PUT /target/{target_id}` — update target
+- `DELETE /target/{target_id}` — delete target and its associated check records
+- `POST /target/{target_id}/check` — run and save an on-demand check
+- `GET /target/{target_id}/history` — read that target's check history
+- `GET /target/{target_id}/stats` — summary statistics
+
+A hidden POST compatibility alias remains for history clients that used the original nonstandard method.
+
+## Notes
+
+- Uptime percentage is calculated as successful checks divided by recorded checks, not as wall-clock availability.
+- URL checks reject obvious local/private destinations and manually validate redirects. This is a guard against common SSRF risks, not a substitute for network-level egress restrictions in a hardened production service.
+- Persistent database migrations are not yet managed by Alembic; the app currently creates missing tables on startup.
