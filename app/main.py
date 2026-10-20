@@ -55,10 +55,14 @@ def home():
 
 @app.get("/health", tags=["health"])
 def health_check():
-    """Render readiness probe: only report healthy when the database responds."""
+    """Render readiness probe; report the active SQLAlchemy backend as well."""
     try:
         with engine.connect() as connection:
             connection.execute(text("SELECT 1"))
     except Exception as error:
         raise HTTPException(status_code=503, detail="Database connection failed") from error
-    return {"status": "healthy", "database": "connected"}
+    return {
+        "status": "healthy",
+        "database": "connected",
+        "database_type": engine.url.get_backend_name(),
+    }
