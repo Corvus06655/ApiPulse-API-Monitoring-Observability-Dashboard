@@ -9,7 +9,7 @@ ApiPulse is a full-stack API-monitoring project with a FastAPI backend, SQLAlche
 - **Interactive API docs:** https://apipulse-backend-ic6r.onrender.com/docs
 - **Backend readiness:** https://apipulse-backend-ic6r.onrender.com/health
 
-The frontend and backend are deployed on Render. Before relying on saved records, configure the backend's `DATABASE_URL` to use the Render PostgreSQL instance as described in [Render database setup](#render-database-setup). The backend currently falls back to local SQLite if `DATABASE_URL` is missing; on a Render free web service, local files can be lost on restart, redeploy, or idle spin-down.
+The frontend and backend have been deployed on Render. The backend falls back to local SQLite when `DATABASE_URL` is not configured. A Render free web service has an ephemeral filesystem, so SQLite is only a temporary fallback for the demo; use the existing Render PostgreSQL instance before relying on saved monitoring records.
 
 ## Features
 
@@ -31,7 +31,7 @@ FastAPI, Python 3.12, SQLAlchemy, PostgreSQL, APScheduler, requests, pytest, Rea
 - `app/`: FastAPI app, database setup, models, schemas, target routes, checker, and scheduler
 - `src/`: React frontend and API client
 - `test/`: backend tests using an isolated in-memory SQLite database
-- `render.yaml`: Render service configuration; the database reference expects the existing `apipulse-db` resource
+- `render.yaml`: Render Blueprint for the existing backend, frontend, and PostgreSQL resource
 - `.env.example`: local frontend configuration
 
 ## Local development
@@ -80,19 +80,19 @@ npm run build
 
 The backend tests use an isolated in-memory SQLite database and do not modify the developer's local data.
 
-## Render database setup
+## Render PostgreSQL setup
 
-A free Render PostgreSQL resource named `apipulse-db` has been created. To attach it to the live backend without copying credentials into GitHub or chat:
+A free PostgreSQL resource named `apipulse-db` already exists in the Render workspace. The Blueprint references it using `fromDatabase`, so Render can populate `DATABASE_URL` without exposing database credentials in source control.
 
-1. Open the [apipulse-db Render dashboard](https://dashboard.render.com/d/dpg-dbbi8ebrjlhs73ebu79g-a).
-2. Use **Connect** and copy the **Internal Database URL**.
-3. Open the [apipulse-backend environment settings](https://dashboard.render.com/web/srv-dbbi8q8n74is73cq00rg).
-4. Add/update `DATABASE_URL` with that Internal Database URL and save/redeploy.
-5. Open the [readiness endpoint](https://apipulse-backend-ic6r.onrender.com/health). It should report `"database_type": "postgresql"`. If it reports `"sqlite"`, the service has not switched over yet.
+1. Open the [Render Dashboard](https://dashboard.render.com/).
+2. Choose **New → Blueprint**, then connect this repository and select the `main` branch. Render uses [Blueprints](https://render.com/docs/infrastructure-as-code) to apply the linked configuration to existing resources whose names match the YAML.
+3. Review the preview before applying it. It should update the existing `apipulse-backend` service and `ApiPulse-API-Monitoring-Observability-Dashboard` static site, and reference the existing `apipulse-db` database. **Do not deploy if the preview proposes duplicate services or a new database**; stop and review the resource names first.
+4. Deploy/sync the Blueprint.
+5. Open the [readiness endpoint](https://apipulse-backend-ic6r.onrender.com/health). It should report `"database_type": "postgresql"`. If it says `"sqlite"`, the database reference has not been applied yet.
 
-Do not commit the database URL into this repository. The backend accepts Render's PostgreSQL URL via the `DATABASE_URL` environment variable. The health endpoint reports both connection status and the active SQLAlchemy backend type.
+Do not copy the database URL into GitHub or chat. The backend accepts Render's PostgreSQL URL through the `DATABASE_URL` environment variable.
 
-**Free-plan limitation:** Render free PostgreSQL resources expire 30 days after creation, and free web services may sleep when idle. This setup is suitable for a portfolio demo, not guaranteed always-on production monitoring or long-term data retention. Upgrade the database before its displayed expiry date if you need to keep data long term.
+**Free-plan limitation:** the current free PostgreSQL instance expires on **November 19, 2026**. Render free web services can sleep after 15 minutes without inbound traffic, so the 60-second in-process scheduler is not guaranteed to run continuously while the service sleeps. This is suitable for a portfolio demo, not guaranteed always-on production monitoring or long-term data retention.
 
 ## API routes
 
