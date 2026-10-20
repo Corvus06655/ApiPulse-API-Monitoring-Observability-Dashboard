@@ -25,11 +25,11 @@ services:
       - key: NODE_VERSION
         value: 22.16.0
       - key: VITE_API_BASE_URL
-        value: https://apipulse-backend.onrender.com
+        value: https://apipulse-backend-ic6r.onrender.com
 
 databases:
   - name: apipulse-db
-    databaseName: apipulse
-    user: apipulse_user
+    databaseName: apipulse_db
+    user: apipulse_db_user
     plan: free
     region: singapore
