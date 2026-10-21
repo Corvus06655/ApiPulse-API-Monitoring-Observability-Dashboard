@@ -69,6 +69,22 @@ export function useDashboardData() {
   const manualChecks = useRef(new Map());
   const requestSequence = useRef(0);
 
+  const reset = useCallback(() => {
+    requestSequence.current += 1;
+    hasLoaded.current = false;
+    manualChecks.current.clear();
+    setData({
+      targets: [],
+      history: [],
+      summary: EMPTY_STATS,
+      loading: true,
+      refreshing: false,
+      error: null,
+      partialErrors: [],
+      updatedAt: null,
+    });
+  }, []);
+
   const refresh = useCallback(async () => {
     const sequence = ++requestSequence.current;
     const initial = !hasLoaded.current;
@@ -177,5 +193,5 @@ export function useDashboardData() {
     if (check) manualChecks.current.set(String(result.target_id), check);
   }, []);
 
-  return { ...data, refresh, rememberManualCheck };
+  return { ...data, refresh, reset, rememberManualCheck };
 }

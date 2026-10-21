@@ -6,6 +6,7 @@ import TargetDetailsDrawer from './components/TargetDetailsDrawer';
 import TargetFormDialog from './components/TargetFormDialog';
 import Topbar from './components/Topbar';
 import { PanelSkeleton } from './components/LoadingSkeleton';
+import AuthPage from './pages/AuthPage.jsx';
 import { api } from './lib/api';
 import { useDashboardData } from './lib/useDashboardData';
 
@@ -32,6 +33,8 @@ function Toast({ toast, onDismiss }) {
 
 export default function App() {
   const data = useDashboardData();
+  const [authUser, setAuthUser] = useState(null);
+  const [authChecking, setAuthChecking] = useState(true);
   const [page, setPage] = useState('Overview');
   const [mobileOpen, setMobileOpen] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
@@ -47,11 +50,39 @@ export default function App() {
   const notify = useCallback((message, type = 'success') => setToast({ message, type, nonce: Date.now() }), []);
   const dismissToast = useCallback(() => setToast(null), []);
 
-  useEffect(() => { void data.refresh(); }, [data.refresh]);
   useEffect(() => {
+    let active = true;
+    if (!api.getAccessToken()) {
+      setAuthChecking(false);
+      return () => { active = false; };
+    }
+    api.getCurrentUser()
+      .then((user) => { if (active) setAuthUser(user); })
+      .catch(() => { api.clearAccessToken(); })
+      .finally(() => { if (active) setAuthChecking(false); });
+    return () => { active = false; };
+  }, []);
+
+  useEffect(() => {
+    function handleUnauthorized() {
+      api.clearAccessToken();
+      data.reset();
+      setAuthUser(null);
+    }
+    window.addEventListener('apipulse:unauthorized', handleUnauthorized);
+    return () => window.removeEventListener('apipulse:unauthorized', handleUnauthorized);
+  }, [data.reset]);
+
+  useEffect(() => {
+    if (authUser) void data.refresh();
+    else data.reset();
+  }, [authUser, data.refresh, data.reset]);
+
+  useEffect(() => {
+    if (!authUser) return undefined;
     const timer = window.setInterval(() => { void data.refresh(); }, 60_000);
     return () => window.clearInterval(timer);
-  }, [data.refresh]);
+  }, [authUser, data.refresh]);
 
   const selectedTarget = useMemo(
     () => data.targets.find((target) => String(target.id) === String(selectedTargetId)) || null,
@@ -140,6 +171,18 @@ export default function App() {
     setDeleteTarget(target);
   }
 
+  function handleAuthenticated(user) {
+    data.reset();
+    setAuthUser(user);
+  }
+
+  function handleLogout() {
+    api.clearAccessToken();
+    data.reset();
+    setAuthUser(null);
+    setPage('Overview');
+  }
+
   let content;
   if (page === 'Monitored APIs') {
     content = <MonitoredApis targets={data.targets} loading={data.loading} unavailable={Boolean(data.error && !data.updatedAt)} onRefresh={data.refresh} onAdd={openCreate} onOpen={setSelectedTargetId} onEdit={openEdit} onDelete={askDelete} onCheck={runCheck} checkingId={checkingId} />;
@@ -151,11 +194,16 @@ export default function App() {
     content = <Overview data={data} onAdd={openCreate} onOpenTarget={setSelectedTargetId} onCheckTarget={runCheck} checkingId={checkingId} onNavigate={setPage} onRefresh={data.refresh} />;
   }
 
+  if (authChecking) {
+    return <main className="auth-loading"><span className="auth-brand-mark"><Activity size={19} /></span><strong>ApiPulse</strong><span className="button-spinner" /><small>Checking your secure session…</small></main>;
+  }
+  if (!authUser) return <AuthPage onAuthenticated={handleAuthenticated} />;
+
   return (
     <div className="app-shell">
       <Sidebar page={page} onNavigate={setPage} mobileOpen={mobileOpen} onClose={() => setMobileOpen(false)} />
       <div className="main-column">
-        <Topbar page={page} onRefresh={data.refresh} refreshing={data.refreshing} backendError={data.error} onMenu={() => setMobileOpen(true)} />
+        <Topbar page={page} onRefresh={data.refresh} refreshing={data.refreshing} backendError={data.error} onMenu={() => setMobileOpen(true)} userEmail={authUser.email} onLogout={handleLogout} />
         <main className="page-content" id="main-content">
           {data.error && page !== 'Overview' ? <div className="global-error" role="alert"><Activity size={15} /><span>{data.updatedAt ? 'Backend refresh failed. Showing the last successfully loaded data.' : 'Could not load monitoring data. Check that FastAPI is reachable from this browser.'}</span><button type="button" className="text-link" onClick={data.refresh}>Retry</button></div> : null}
           <Suspense fallback={<div className="page-stack route-loading"><span className="skeleton-line medium" /><PanelSkeleton rows={5} /></div>}>

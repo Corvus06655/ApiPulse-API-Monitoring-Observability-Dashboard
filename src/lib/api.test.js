@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { api, API_BASE_URL, ApiError, resolveApiBaseUrl } from './api.js';
+import { api, API_BASE_URL, ApiError, resolveApiBaseUrl, setAccessToken, clearAccessToken } from './api.js';
 
 function jsonResponse(status, value) {
   return new Response(value === null ? null : JSON.stringify(value), {
@@ -99,4 +99,37 @@ test('falls back to the supplied backend POST history method on 405', async (t) 
 test('turns FastAPI JSON detail into a readable ApiError', async (t) => {
   stubFetch(t, async () => jsonResponse(404, { detail: 'Target not found' }));
   await assert.rejects(api.getTarget(999), (error) => error instanceof ApiError && error.status === 404 && error.message === 'Target not found');
+});
+
+
+test('login sends JSON credentials without an auth header', async (t) => {
+  let call;
+  stubFetch(t, async (url, options) => { call = { url, options }; return jsonResponse(200, { access_token: 'signed-token', token_type: 'bearer' }); });
+  const result = await api.login({ email: 'person@example.com', password: 'Password123!' });
+  assert.equal(call.url, API_BASE_URL + '/auth/login');
+  assert.equal(call.options.method, 'POST');
+  assert.deepEqual(JSON.parse(call.options.body), { email: 'person@example.com', password: 'Password123!' });
+  assert.equal(call.options.headers.Authorization, undefined);
+  assert.equal(result.access_token, 'signed-token');
+});
+
+test('attaches the session token to protected requests', async (t) => {
+  const originalWindowDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'window');
+  const values = new Map();
+  Object.defineProperty(globalThis, 'window', { configurable: true, value: { sessionStorage: {
+    getItem: (key) => values.get(key) ?? null,
+    setItem: (key, value) => values.set(key, value),
+    removeItem: (key) => values.delete(key),
+  } } });
+  t.after(() => {
+    clearAccessToken();
+    if (originalWindowDescriptor) Object.defineProperty(globalThis, 'window', originalWindowDescriptor);
+    else delete globalThis.window;
+  });
+  setAccessToken('signed-token');
+  let call;
+  stubFetch(t, async (url, options) => { call = { url, options }; return jsonResponse(200, { email: 'person@example.com' }); });
+  await api.getCurrentUser();
+  assert.equal(call.url, API_BASE_URL + '/auth/me');
+  assert.equal(call.options.headers.Authorization, 'Bearer signed-token');
 });
