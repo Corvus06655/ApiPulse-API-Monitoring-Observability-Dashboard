@@ -3,8 +3,11 @@ const TOKEN_KEY = 'apipulse_access_token';
 const viteEnvironment = import.meta.env || {};
 
 export function resolveApiBaseUrl(environment = {}) {
-  const configured = environment.VITE_API_BASE_URL?.trim();
-  if (configured) return configured.replace(/\\/+$/, '');
+  let configured = environment.VITE_API_BASE_URL?.trim();
+  if (configured) {
+    while (configured.endsWith('/')) configured = configured.slice(0, -1);
+    return configured;
+  }
   return environment.PROD ? '' : DEFAULT_LOCAL_API_URL;
 }
 export const API_BASE_URL = resolveApiBaseUrl(viteEnvironment);
