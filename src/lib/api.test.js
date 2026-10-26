@@ -21,11 +21,11 @@ test('uses localhost only for development and never as an implicit production AP
   assert.equal(resolveApiBaseUrl({ PROD: true, VITE_API_BASE_URL: ' https://api.example.com/ ' }), 'https://api.example.com');
 });
 
-test('uses configured backend base URL and GET / for health', async (t) => {
+test('uses configured backend base URL and GET /health for health', async (t) => {
   let call;
   stubFetch(t, async (url, options) => { call = { url, options }; return jsonResponse(200, { status: 'running' }); });
   assert.deepEqual(await api.getHealth(), { status: 'running' });
-  assert.equal(call.url, `${API_BASE_URL}/`);
+  assert.equal(call.url, `${API_BASE_URL}/health`);
   assert.equal(call.options.method, 'GET');
 });
 
