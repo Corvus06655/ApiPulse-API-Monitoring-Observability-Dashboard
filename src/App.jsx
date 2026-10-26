@@ -7,7 +7,7 @@ import TargetFormDialog from './components/TargetFormDialog';
 import Topbar from './components/Topbar';
 import { PanelSkeleton } from './components/LoadingSkeleton';
 import AuthPage from './pages/AuthPage.jsx';
-import { api } from './lib/api';
+import { api, getAccessToken, clearAccessToken } from './lib/api';
 import { useDashboardData } from './lib/useDashboardData';
 
 const CheckHistory = lazy(() => import('./pages/CheckHistory.jsx'));
@@ -52,20 +52,20 @@ export default function App() {
 
   useEffect(() => {
     let active = true;
-    if (!api.getAccessToken()) {
+    if (!getAccessToken()) {
       setAuthChecking(false);
       return () => { active = false; };
     }
     api.getCurrentUser()
       .then((user) => { if (active) setAuthUser(user); })
-      .catch(() => { api.clearAccessToken(); })
+      .catch(() => { clearAccessToken(); })
       .finally(() => { if (active) setAuthChecking(false); });
     return () => { active = false; };
   }, []);
 
   useEffect(() => {
     function handleUnauthorized() {
-      api.clearAccessToken();
+      clearAccessToken();
       data.reset();
       setAuthUser(null);
     }
@@ -177,7 +177,7 @@ export default function App() {
   }
 
   function handleLogout() {
-    api.clearAccessToken();
+    clearAccessToken();
     data.reset();
     setAuthUser(null);
     setPage('Overview');
