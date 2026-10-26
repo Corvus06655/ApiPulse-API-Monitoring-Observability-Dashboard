@@ -77,7 +77,7 @@ async function request(path, { method = 'GET', body, signal, auth = true } = {})
 
 const targetPath = (targetId) => '/target/' + encodeURIComponent(targetId);
 export const api = {
-  getHealth: () => request('/'),
+  getHealth: () => request('/health'),
   registerUser: (user) => request('/auth/register', { method: 'POST', body: user, auth: false }),
   login: (user) => request('/auth/login', { method: 'POST', body: user, auth: false }),
   getCurrentUser: () => request('/auth/me'),
